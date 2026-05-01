@@ -12,5 +12,16 @@ export default defineConfig(({ mode }) => {
         '/api': 'http://localhost:5000',
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            react: ['react', 'react-dom', 'react-router-dom'],
+            recharts: ['recharts'],
+            mediapipe: ['@mediapipe/pose', '@mediapipe/camera_utils', '@mediapipe/drawing_utils'],
+          },
+        },
+      },
+    },
   };
 });
