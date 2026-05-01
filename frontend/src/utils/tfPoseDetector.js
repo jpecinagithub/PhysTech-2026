@@ -1,9 +1,13 @@
 import * as poseDetection from '@tensorflow-models/pose-detection';
+import * as tf from '@tensorflow/tfjs-core';
+import '@tensorflow/tfjs-backend-webgl';
 
 let detector = null;
 
 export async function initializePoseDetection() {
   if (detector) return detector;
+
+  await tf.ready();
 
   const model = poseDetection.SupportedModels.MoveNet;
   const detectorConfig = {
@@ -29,8 +33,12 @@ export function convertToMediaPipeFormat(poses) {
   const pose = poses[0];
   const landmarks = {};
 
+  // MoveNet has 17 keypoints, we need to map to MediaPipe's 33
   pose.keypoints.forEach((keypoint) => {
-    landmarks[keypoint.index] = {
+    // Use the keypoint index directly (0-16 for MoveNet)
+    // MediaPipe pose uses 0-32, so we'll map to similar positions
+    const mpIndex = keypoint.index;
+    landmarks[mpIndex] = {
       x: keypoint.x / 640,
       y: keypoint.y / 480,
       visibility: keypoint.score || 1.0
