@@ -164,6 +164,7 @@ export default function AnalyzePage() {
       elapsed += 100;
       const landmarks = generateSimulatedLandmarks(exercise, elapsed);
       const analysis = analyzeFrame(landmarks, exercise);
+      console.log('Sim step:', elapsed, 'landmarks:', !!landmarks, 'angles:', analysis.angles);
       onResults({ landmarks, angles: analysis.angles });
     }, 100);
 
