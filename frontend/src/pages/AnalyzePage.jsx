@@ -162,7 +162,8 @@ export default function AnalyzePage() {
     simIntervalRef.current = setInterval(() => {
       elapsed += 100;
       const landmarks = generateSimulatedLandmarks(exercise, elapsed);
-      onResults({ landmarks });
+      const analysis = analyzeFrame(landmarks, exercise);
+      onResults({ landmarks, angles: analysis.angles });
     }, 100);
 
     setIsRunning(true);
