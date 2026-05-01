@@ -16,28 +16,51 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- MediaPipe Pose - Local files -->
+    <!-- MediaPipe Configuration - MUST be before any MediaPipe scripts -->
     <script>
-      window.mediaPipeBase = '/phystech/mediapipe/';
-      console.log('MediaPipe configured to load from:', window.mediaPipeBase);
+      // Set the base path for ALL MediaPipe files
+      window.MEDIAPIPE_PATH = '/phystech/mediapipe/';
+      
+      // Override the pathname so MediaPipe thinks scripts are in /phystech/mediapipe/
+      try {
+        const originalLocation = window.location;
+        const fakePathname = '/phystech/mediapipe/dummy.html';
+        
+        Object.defineProperty(window, 'location', {
+          get: function() {
+            const loc = originalLocation;
+            return new Proxy(loc, {
+              get: function(target, prop) {
+                if (prop === 'pathname') return fakePathname;
+                return target[prop];
+              }
+            });
+          },
+          configurable: true
+        });
+      } catch(e) {
+        console.warn('Could not override location:', e);
+      }
+      
+      console.log('✅ MediaPipe path configured:', window.MEDIAPIPE_PATH);
     </script>
+    
     <script src="/phystech/mediapipe/camera_utils.js"></script>
     <script src="/phystech/mediapipe/drawing_utils.js"></script>
     <script src="/phystech/mediapipe/pose.js"></script>
+    
     <script>
+      // Restore original location after scripts load
       window.addEventListener('load', () => {
+        console.log('MediaPipe scripts loaded');
         if (window.Pose) {
-          console.log('✅ MediaPipe Pose loaded successfully (local)');
+          console.log('✅ MediaPipe Pose loaded');
         } else {
-          console.error('❌ MediaPipe Pose failed to load! Check /phystech/mediapipe/');
-        }
-        if (window.Camera) {
-          console.log('✅ MediaPipe Camera loaded successfully');
-        } else {
-          console.error('❌ MediaPipe Camera failed to load!');
+          console.error('❌ MediaPipe Pose NOT loaded');
         }
       });
     </script>
+    
     <!-- Vite will inject the main JS bundle here -->
   </body>
 </html>
