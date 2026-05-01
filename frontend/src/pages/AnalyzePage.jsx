@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pose } from '@mediapipe/pose';
-import { Camera } from '@mediapipe/camera_utils';
-import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
-import { POSE_CONNECTIONS } from '@mediapipe/pose';
 import Layout from '../components/Layout';
 import { analyzeFrame, updateRepCount } from '../utils/poseAnalysis';
 import { sessionsApi } from '../services/api';
+
+// MediaPipe loaded via CDN script tags in index.html
+const { Pose, POSE_CONNECTIONS } = window;
+const { Camera } = window;
+const { drawConnectors, drawLandmarks } = window;
 
 const EXERCISES = [
   { id: 'squat', label: 'Squat', icon: '🦵', desc: 'Tracks knee angles, hip depth & back alignment' },
