@@ -175,8 +175,8 @@ export default function AnalyzePage() {
     
     poseRef.current = new Pose({
       locateFile: (file) => {
-        // Use stable v0.3 CDN - matches index.html configuration
-        const baseUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.3.1620248257/';
+        // Use local files - matches index.html configuration
+        const baseUrl = window.mediaPipeBase || '/phystech/mediapipe/';
         return baseUrl + file;
       }
     });
