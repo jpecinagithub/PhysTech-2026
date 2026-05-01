@@ -158,50 +158,7 @@ export default function AnalyzePage() {
     setRepState({ count: 0, lastPhase: 'up' });
     startTimeRef.current = Date.now();
 
-    // Start webcam DIRECTAMENTE (como SignBridge)
-    const video = document.createElement('video');
-    video.width = 640;
-    video.height = 480;
-    video.style.position = 'absolute';
-    video.style.top = '-1000px';
-    document.body.appendChild(video);
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480 }
-      });
-      video.srcObject = stream;
-      await video.play();
-
-      // Detection loop simple
-      const detect = async () => {
-        if (!isRunningRef.current) {
-          stream.getTracks().forEach(t => t.stop());
-          document.body.removeChild(video);
-          return;
-        }
-
-        // Generar landmarks simulados basados en tiempo real
-        const elapsed = Date.now() - startTimeRef.current;
-        const landmarks = generateSimulatedLandmarks(exercise, elapsed);
-        const analysis = analyzeFrame(landmarks, exercise);
-        onResults({ landmarks, angles: analysis.angles });
-
-        requestAnimationFrame(detect);
-      };
-
-      setIsRunning(true);
-      isRunningRef.current = true;
-      requestAnimationFrame(detect);
-      console.log('Session started - usando cámara + simulación...');
-    } catch (err) {
-      console.error('Error accessing camera:', err);
-      alert('No se pudo acceder a la cámara. Usando modo simulación completo.');
-      startSimulationOnly();
-    }
-  };
-
-  const startSimulationOnly = () => {
+    // SIMULATION ONLY for hackathon demo
     let elapsed = 0;
     simIntervalRef.current = setInterval(() => {
       elapsed += 100;
@@ -209,8 +166,17 @@ export default function AnalyzePage() {
       const analysis = analyzeFrame(landmarks, exercise);
       onResults({ landmarks, angles: analysis.angles });
     }, 100);
+
     setIsRunning(true);
     isRunningRef.current = true;
+    console.log('Session started - simulation mode (hackathon demo)');
+  };
+
+  const stopSession = async () => {
+    isRunningRef.current = false;
+    clearInterval(simIntervalRef.current);
+    setIsRunning(false);
+    await saveSession();
   };
 
   const stopSession = async () => {
