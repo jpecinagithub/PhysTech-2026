@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { analyzeFrame, updateRepCount } from '../utils/poseAnalysis';
-import { generateSimulatedLandmarks, getSimulationPhase } from '../utils/simulation';
+import { initializePoseDetection, detectPose, convertToMediaPipeFormat } from '../utils/tfPoseDetector';
 import { sessionsApi } from '../services/api';
 
 const EXERCISES = [
@@ -104,7 +104,7 @@ export default function AnalyzePage() {
   const navigate = useNavigate();
   const startTimeRef = useRef(null);
   const metricsBuffer = useRef([]);
-  const simIntervalRef = useRef(null);
+  const videoRef = useRef(null);
 
   const onResults = useCallback((results) => {
     const canvas = canvasRef.current;
@@ -157,21 +157,46 @@ export default function AnalyzePage() {
     setRepState({ count: 0, lastPhase: 'up' });
     startTimeRef.current = Date.now();
 
-    // Start simulation
-    let elapsed = 0;
-    simIntervalRef.current = setInterval(() => {
-      elapsed += 100;
-      const landmarks = generateSimulatedLandmarks(exercise, elapsed);
-      const analysis = analyzeFrame(landmarks, exercise);
-      onResults({ landmarks, angles: analysis.angles });
-    }, 100);
+    // Initialize TensorFlow.js pose detection
+    await initializePoseDetection();
+
+    // Start webcam
+    const video = document.createElement('video');
+    video.width = 640;
+    video.height = 480;
+    video.style.display = 'none';
+    document.body.appendChild(video);
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 640, height: 480 }
+    });
+    video.srcObject = stream;
+    await video.play();
+
+    // Detection loop
+    const detect = async () => {
+      if (!isRunning) {
+        stream.getTracks().forEach(t => t.stop());
+        document.body.removeChild(video);
+        return;
+      }
+
+      const poses = await detectPose(video);
+      const results = convertToMediaPipeFormat(poses);
+
+      if (results && results.landmarks) {
+        onResults(results);
+      }
+
+      requestAnimationFrame(detect);
+    };
 
     setIsRunning(true);
-    console.log('Session started - analyzing pose (simulated)...');
+    requestAnimationFrame(detect);
+    console.log('Session started - analyzing pose with TensorFlow.js...');
   };
 
   const stopSession = async () => {
-    clearInterval(simIntervalRef.current);
     setIsRunning(false);
     await saveSession();
   };
