@@ -162,7 +162,7 @@ export default function AnalyzePage() {
 
   useEffect(() => {
     poseRef.current = new Pose({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+      locateFile: (file) => `/phystech/mediapipe/${file}`,
     });
     poseRef.current.setOptions({
       modelComplexity: 1,
