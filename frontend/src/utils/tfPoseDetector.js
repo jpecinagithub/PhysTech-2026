@@ -71,9 +71,41 @@ export function convertToMediaPipeFormat(results, exercise) {
     };
   });
 
-  // Calculate angles like the simulation does
-  const { analyzeFrame } = require('../utils/poseAnalysis') || {};
-  const angles = analyzeFrame ? analyzeFrame({ landmarks }, exercise).angles : {};
+  // Calculate angles from landmarks (replicate what analyzeFrame does)
+  const angles = {};
+  
+  if (landmarks[25] && landmarks[23] && landmarks[24]) {
+    // Left knee, hip, right hip
+    angles.left_knee_angle = calculateAngle(
+      { x: landmarks[23].x, y: landmarks[23].y },
+      { x: landmarks[25].x, y: landmarks[25].y },
+      { x: landmarks[24].x, y: landmarks[24].y }
+    );
+  }
+  
+  if (landmarks[26] && landmarks[24] && landmarks[23]) {
+    angles.right_knee_angle = calculateAngle(
+      { x: landmarks[24].x, y: landmarks[24].y },
+      { x: landmarks[26].x, y: landmarks[26].y },
+      { x: landmarks[23].x, y: landmarks[23].y }
+    );
+  }
+
+  if (landmarks[23] && landmarks[25] && landmarks[27]) {
+    angles.hip_angle = calculateAngle(
+      { x: landmarks[25].x, y: landmarks[25].y },
+      { x: landmarks[23].x, y: landmarks[23].y },
+      { x: landmarks[27].x, y: landmarks[27].y }
+    );
+  }
 
   return { landmarks, angles };
+}
+
+function calculateAngle(p1, p2, p3) {
+  const radians = Math.atan2(p3.y - p2.y, p3.x - p2.x) -
+                  Math.atan2(p1.y - p2.y, p1.x - p2.x);
+  let angle = Math.abs(radians * 180.0 / Math.PI);
+  if (angle > 180.0) angle = 360.0 - angle;
+  return Math.round(angle);
 }
