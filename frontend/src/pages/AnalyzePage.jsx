@@ -179,13 +179,6 @@ export default function AnalyzePage() {
     await saveSession();
   };
 
-  const stopSession = async () => {
-    isRunningRef.current = false;
-    clearInterval(simIntervalRef.current);
-    setIsRunning(false);
-    await saveSession();
-  };
-
   const saveSession = async () => {
     setSaving(true);
     try {
