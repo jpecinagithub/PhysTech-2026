@@ -1,5 +1,20 @@
 import { useState } from 'react';
 
+const overlay = {
+  position: 'fixed', inset: 0, background: '#0008', zIndex: 1000,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  backdropFilter: 'blur(4px)',
+};
+const modal = {
+  background: '#1e1e32', border: '1px solid #6366f130', borderRadius: 20,
+  width: '100%', maxWidth: 520, padding: '2.5rem',
+  boxShadow: '0 25px 80px #0008',
+  maxHeight: '90vh', overflowY: 'auto',
+};
+const featureGrid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1.25rem' };
+const featureItem = { background: '#6366f110', border: '1px solid #6366f120', borderRadius: 10, padding: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 };
+const exRow = { display: 'flex', gap: '1rem', alignItems: 'flex-start', background: '#6366f110', borderRadius: 10, padding: '0.75rem 1rem' };
+
 const STEPS = [
   {
     icon: '👋',
@@ -123,21 +138,6 @@ const STEPS = [
     ),
   },
 ];
-
-const overlay = {
-  position: 'fixed', inset: 0, background: '#0008', zIndex: 1000,
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  backdropFilter: 'blur(4px)',
-};
-const modal = {
-  background: '#1e1e32', border: '1px solid #6366f130', borderRadius: 20,
-  width: '100%', maxWidth: 520, padding: '2.5rem',
-  boxShadow: '0 25px 80px #0008',
-  maxHeight: '90vh', overflowY: 'auto',
-};
-const featureGrid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1.25rem' };
-const featureItem = { background: '#6366f110', border: '1px solid #6366f120', borderRadius: 10, padding: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 };
-const exRow = { display: 'flex', gap: '1rem', alignItems: 'flex-start', background: '#6366f110', borderRadius: 10, padding: '0.75rem 1rem' };
 
 export default function OnboardingModal({ onClose }) {
   const [step, setStep] = useState(0);
