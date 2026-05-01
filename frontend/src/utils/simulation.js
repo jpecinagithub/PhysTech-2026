@@ -26,41 +26,42 @@ export function generateSimulatedLandmarks(exercise, timeMs) {
 
   switch (exercise) {
     case 'squat':
-      landmarks = generateSquatLandmarks(factor);
+      landmarks = generateSquatLandmarks(factor, simulationPhase);
       break;
     case 'deadlift':
-      landmarks = generateDeadliftLandmarks(factor);
+      landmarks = generateDeadliftLandmarks(factor, simulationPhase);
       break;
     case 'pushup':
-      landmarks = generatePushupLandmarks(factor);
+      landmarks = generatePushupLandmarks(factor, simulationPhase);
       break;
   }
 
   return landmarks;
 }
 
-function generateSquatLandmarks(factor) {
+function generateSquatLandmarks(factor, phase) {
   // Simulate squat: knees go from ~170° (up) to ~90° (down)
-  const kneeAngle = 170 - (80 * factor); // 170 → 90
-  const hipAngle = 160 - (70 * factor); // 160 → 90
-  const backAngle = 85 + (10 * factor); // 85 → 95 (slight lean)
+  const isDown = phase === 'down';
+  const kneeAngle = isDown ? 90 + (80 * (1 - factor)) : 170 - (80 * factor);
+  const hipAngle = isDown ? 90 + (70 * (1 - factor)) : 160 - (70 * factor);
+  const backAngle = isDown ? 95 - (10 * (1 - factor)) : 85 + (10 * factor);
   
   return {
     [LM.LEFT_HIP]: { x: 0.5, y: 0.6, visibility: 1 },
-    [LM.LEFT_KNEE]: { x: 0.45, y: 0.7, visibility: 1 },
+    [LM.LEFT_KNEE]: { x: 0.45, y: isDown ? 0.7 + (0.1 * factor) : 0.7 - (0.1 * factor), visibility: 1 },
     [LM.LEFT_ANKLE]: { x: 0.4, y: 0.85, visibility: 1 },
     [LM.RIGHT_HIP]: { x: 0.5, y: 0.6, visibility: 1 },
-    [LM.RIGHT_KNEE]: { x: 0.55, y: 0.7, visibility: 1 },
+    [LM.RIGHT_KNEE]: { x: 0.55, y: isDown ? 0.7 + (0.1 * factor) : 0.7 - (0.1 * factor), visibility: 1 },
     [LM.RIGHT_ANKLE]: { x: 0.6, y: 0.85, visibility: 1 },
     [LM.LEFT_SHOULDER]: { x: 0.5, y: 0.45, visibility: 1 },
     [LM.RIGHT_SHOULDER]: { x: 0.5, y: 0.45, visibility: 1 },
   };
 }
 
-function generateDeadliftLandmarks(factor) {
-  // Simulate deadlift: hip hinge
-  const hipAngle = 160 - (80 * factor); // 160 → 80
-  const backAngle = 70 + (30 * factor); // 70 → 100
+function generateDeadliftLandmarks(factor, phase) {
+  const isDown = phase === 'down';
+  const hipAngle = isDown ? 80 + (80 * (1 - factor)) : 160 - (80 * factor);
+  const backAngle = isDown ? 100 - (30 * (1 - factor)) : 70 + (30 * factor);
   
   return {
     [LM.LEFT_HIP]: { x: 0.5, y: 0.55, visibility: 1 },
@@ -69,22 +70,22 @@ function generateDeadliftLandmarks(factor) {
     [LM.RIGHT_HIP]: { x: 0.5, y: 0.55, visibility: 1 },
     [LM.RIGHT_KNEE]: { x: 0.52, y: 0.7, visibility: 1 },
     [LM.RIGHT_ANKLE]: { x: 0.55, y: 0.85, visibility: 1 },
-    [LM.LEFT_SHOULDER]: { x: 0.5, y: 0.4, visibility: 1 },
-    [LM.RIGHT_SHOULDER]: { x: 0.5, y: 0.4, visibility: 1 },
+    [LM.LEFT_SHOULDER]: { x: 0.5, y: isDown ? 0.4 + (0.1 * factor) : 0.4 - (0.1 * factor), visibility: 1 },
+    [LM.RIGHT_SHOULDER]: { x: 0.5, y: isDown ? 0.4 + (0.1 * factor) : 0.4 - (0.1 * factor), visibility: 1 },
   };
 }
 
-function generatePushupLandmarks(factor) {
-  // Simulate pushup: elbows go from ~160° (up) to ~90° (down)
-  const elbowAngle = 160 - (70 * factor); // 160 → 90
-  const bodyAngle = 175 - (10 * factor); // 175 → 165 (body line)
+function generatePushupLandmarks(factor, phase) {
+  const isDown = phase === 'down';
+  const elbowAngle = isDown ? 90 + (70 * (1 - factor)) : 160 - (70 * factor);
+  const bodyAngle = isDown ? 165 + (10 * (1 - factor)) : 175 - (10 * factor);
   
   return {
     [LM.LEFT_SHOULDER]: { x: 0.5, y: 0.5, visibility: 1 },
-    [LM.LEFT_ELBOW]: { x: 0.45, y: 0.65, visibility: 1 },
+    [LM.LEFT_ELBOW]: { x: isDown ? 0.45 - (0.05 * factor) : 0.45 + (0.05 * factor), y: 0.65, visibility: 1 },
     [LM.LEFT_WRIST]: { x: 0.42, y: 0.7, visibility: 1 },
     [LM.RIGHT_SHOULDER]: { x: 0.5, y: 0.5, visibility: 1 },
-    [LM.RIGHT_ELBOW]: { x: 0.55, y: 0.65, visibility: 1 },
+    [LM.RIGHT_ELBOW]: { x: isDown ? 0.55 + (0.05 * factor) : 0.55 - (0.05 * factor), y: 0.65, visibility: 1 },
     [LM.RIGHT_WRIST]: { x: 0.58, y: 0.7, visibility: 1 },
     [LM.LEFT_HIP]: { x: 0.5, y: 0.75, visibility: 1 },
     [LM.LEFT_ANKLE]: { x: 0.5, y: 0.95, visibility: 1 },
