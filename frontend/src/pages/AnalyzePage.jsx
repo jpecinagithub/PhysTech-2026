@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { analyzeFrame, updateRepCount } from '../utils/poseAnalysis';
-import { generateSimulatedLandmarks } from '../utils/simulation';
+import { initializePoseDetection, detectPose, convertToMediaPipeFormat } from '../utils/tfPoseDetector';
 import { sessionsApi } from '../services/api';
 
 const EXERCISES = [
@@ -104,7 +104,6 @@ export default function AnalyzePage() {
   const navigate = useNavigate();
   const startTimeRef = useRef(null);
   const metricsBuffer = useRef([]);
-  const simIntervalRef = useRef(null);
   const isRunningRef = useRef(false);
 
   const onResults = useCallback((results) => {
@@ -158,24 +157,49 @@ export default function AnalyzePage() {
     setRepState({ count: 0, lastPhase: 'up' });
     startTimeRef.current = Date.now();
 
-    // SIMULATION ONLY for hackathon demo
-    let elapsed = 0;
-    simIntervalRef.current = setInterval(() => {
-      elapsed += 100;
-      const landmarks = generateSimulatedLandmarks(exercise, elapsed);
-      const analysis = analyzeFrame(landmarks, exercise);
-      console.log('Sim step:', elapsed, 'landmarks:', !!landmarks, 'angles:', analysis.angles);
-      onResults({ landmarks, angles: analysis.angles });
-    }, 100);
+    // Initialize MediaPipe from CDN
+    await initializePoseDetection();
+
+    // Start webcam
+    const video = document.createElement('video');
+    video.width = 640;
+    video.height = 480;
+    video.style.position = 'absolute';
+    video.style.top = '-1000px';
+    document.body.appendChild(video);
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 640, height: 480 }
+    });
+    video.srcObject = stream;
+    await video.play();
+
+    // Detection loop
+    const detect = async () => {
+      if (!isRunningRef.current) {
+        stream.getTracks().forEach(t => t.stop());
+        document.body.removeChild(video);
+        return;
+      }
+
+      const results = await detectPose(video);
+      const formattedResults = convertToMediaPipeFormat(results);
+
+      if (formattedResults && formattedResults.landmarks) {
+        onResults(formattedResults);
+      }
+
+      requestAnimationFrame(detect);
+    };
 
     setIsRunning(true);
     isRunningRef.current = true;
-    console.log('Session started - simulation mode (hackathon demo)');
+    requestAnimationFrame(detect);
+    console.log('Session started - analyzing pose with MediaPipe...');
   };
 
   const stopSession = async () => {
     isRunningRef.current = false;
-    clearInterval(simIntervalRef.current);
     setIsRunning(false);
     await saveSession();
   };
