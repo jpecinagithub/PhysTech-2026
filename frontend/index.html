@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%236366f1'/><text x='16' y='22' font-family='Arial' font-size='18' font-weight='900' fill='white' text-anchor='middle'>P</text></svg>" />
     <link rel="shortcut icon" href="data:," />
-    <title>PhysTech 2026 — Biomechanics Analyzer</title>
+    <title>PhysTech 2026 - Biomechanics Analyzer</title>
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f1a; color: #e2e8f0; }
@@ -16,51 +16,9 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- MediaPipe Configuration - MUST be before any MediaPipe scripts -->
     <script>
-      // Set the base path for ALL MediaPipe files
-      window.MEDIAPIPE_PATH = '/phystech/mediapipe/';
-      
-      // Override the pathname so MediaPipe thinks scripts are in /phystech/mediapipe/
-      try {
-        const originalLocation = window.location;
-        const fakePathname = '/phystech/mediapipe/dummy.html';
-        
-        Object.defineProperty(window, 'location', {
-          get: function() {
-            const loc = originalLocation;
-            return new Proxy(loc, {
-              get: function(target, prop) {
-                if (prop === 'pathname') return fakePathname;
-                return target[prop];
-              }
-            });
-          },
-          configurable: true
-        });
-      } catch(e) {
-        console.warn('Could not override location:', e);
-      }
-      
-      console.log('✅ MediaPipe path configured:', window.MEDIAPIPE_PATH);
+      console.log('PhysTech 2026 - Simulation mode for hackathon');
+      window.simulationMode = true;
     </script>
-    
-    <script src="/phystech/mediapipe/camera_utils.js"></script>
-    <script src="/phystech/mediapipe/drawing_utils.js"></script>
-    <script src="/phystech/mediapipe/pose.js"></script>
-    
-    <script>
-      // Restore original location after scripts load
-      window.addEventListener('load', () => {
-        console.log('MediaPipe scripts loaded');
-        if (window.Pose) {
-          console.log('✅ MediaPipe Pose loaded');
-        } else {
-          console.error('❌ MediaPipe Pose NOT loaded');
-        }
-      });
-    </script>
-    
-    <!-- Vite will inject the main JS bundle here -->
   </body>
 </html>
