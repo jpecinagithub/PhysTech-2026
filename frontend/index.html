@@ -16,9 +16,36 @@
   </head>
   <body>
     <div id="root"></div>
-    <script src="/phystech/mediapipe/camera_utils.js"></script>
-    <script src="/phystech/mediapipe/drawing_utils.js"></script>
-    <script src="/phystech/mediapipe/pose.js"></script>
+    <!-- MediaPipe Pose - Stable v0.3 with WASM fix -->
+    <script>
+      window.Module = window.Module || {};
+      window.Module.locateFile = function(file) {
+        const base = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.3.1620248257/';
+        if (file.endsWith('.wasm')) {
+          return base + file;
+        }
+        return base + file;
+      };
+      console.log('MediaPipe Module.locateFile configured for v0.3');
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1620248257/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248257/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.3.1620248257/pose.js" crossorigin="anonymous"></script>
+    <script>
+      // Verify MediaPipe loaded after DOM ready
+      window.addEventListener('load', () => {
+        if (window.Pose) {
+          console.log('✅ MediaPipe Pose loaded successfully (v0.3)');
+        } else {
+          console.error('❌ MediaPipe Pose failed to load! Check CDN.');
+        }
+        if (window.Camera) {
+          console.log('✅ MediaPipe Camera loaded successfully');
+        } else {
+          console.error('❌ MediaPipe Camera failed to load!');
+        }
+      });
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

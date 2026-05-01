@@ -4,8 +4,15 @@ require('dotenv').config();
 const openai = new OpenAI({
   apiKey: process.env.AI_API_KEY,
   baseURL: process.env.AI_API_BASE_URL,
-  timeout: 30000,
+  timeout: 10000,
 });
+
+function timeoutPromise(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('AI request timeout')), ms))
+  ]);
+}
 
 async function generateSessionReport(exerciseType, metrics, totalReps, durationSeconds) {
   const avgFormScore = metrics.length
@@ -46,20 +53,51 @@ Provide a JSON response with this exact structure:
   "next_session_tip": "<one actionable tip for next session>"
 }`;
 
-  const response = await openai.chat.completions.create({
-    model: process.env.AI_MODEL,
-    messages: [
-      { role: 'system', content: 'You are a professional sports biomechanics coach. Always respond with valid JSON only.' },
-      { role: 'user', content: prompt },
-    ],
-    temperature: 0.7,
-    max_tokens: 600,
-  });
+  try {
+    const aiPromise = openai.chat.completions.create({
+      model: process.env.AI_MODEL,
+      messages: [
+        { role: 'system', content: 'You are a professional sports biomechanics coach. Always respond with valid JSON only.' },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 600,
+    });
 
-  const content = response.choices[0].message.content.trim();
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('AI returned invalid JSON');
-  return JSON.parse(jsonMatch[0]);
+    const response = await timeoutPromise(aiPromise, 15000);
+
+    const content = response.choices[0].message.content.trim();
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('AI returned invalid JSON');
+    return JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    console.error('AI generation failed, using fallback:', err.message);
+    return generateFallbackReport(avgFormScore, alerts, angleAverages);
+  }
+}
+
+function generateFallbackReport(avgFormScore, alerts, angleAverages) {
+  const score = parseFloat(avgFormScore) || 50;
+  const alertCount = Object.keys(alerts).length;
+  const risk = score > 70 ? 'low' : score > 40 ? 'medium' : 'high';
+
+  const strengths = score > 70
+    ? ['Good overall form maintained', 'Consistent performance throughout session']
+    : ['Completed the workout session', 'Collected form data for analysis'];
+
+  const improvements = alertCount > 0
+    ? [`Address ${Object.keys(alerts)[0]} issues`, 'Focus on maintaining proper form']
+    : ['Continue maintaining good form', 'Try increasing workout intensity gradually'];
+
+  return {
+    overall_score: score,
+    summary: `Session completed with an average form score of ${score}/100. ${alertCount > 0 ? `Detected ${alertCount} form issue(s) that need attention.` : 'No major form issues detected.'}`,
+    strengths,
+    improvements,
+    injury_risk: risk,
+    injury_risk_reason: risk === 'low' ? 'Good form reduces injury risk' : 'Form issues may increase injury risk',
+    next_session_tip: alertCount > 0 ? `Focus on fixing ${Object.keys(alerts)[0]} in your next session` : 'Keep up the good work and maintain consistency'
+  };
 }
 
 function computeAngleAverages(exerciseType, metrics) {

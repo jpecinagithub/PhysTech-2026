@@ -5,9 +5,15 @@ import { analyzeFrame, updateRepCount } from '../utils/poseAnalysis';
 import { sessionsApi } from '../services/api';
 
 // MediaPipe loaded via CDN script tags in index.html
-const { Pose, POSE_CONNECTIONS } = window;
-const { Camera } = window;
+const Pose = window.Pose;
+const POSE_CONNECTIONS = window.POSE_CONNECTIONS;
+const Camera = window.Camera;
 const { drawConnectors, drawLandmarks } = window;
+
+// Verify MediaPipe loaded
+if (!Pose) console.error('MediaPipe Pose not loaded from CDN! Check index.html scripts.');
+if (!Camera) console.error('MediaPipe Camera not loaded from CDN! Check index.html scripts.');
+if (!drawConnectors) console.error('MediaPipe drawing_utils not loaded from CDN! Check index.html scripts.');
 
 const EXERCISES = [
   { id: 'squat', label: 'Squat', icon: '🦵', desc: 'Tracks knee angles, hip depth & back alignment' },
@@ -124,6 +130,7 @@ export default function AnalyzePage() {
     ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
     if (results.poseLandmarks) {
+      console.log('Detected pose with', results.poseLandmarks.length, 'landmarks');
       drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#6366f180', lineWidth: 2 });
       drawLandmarks(ctx, results.poseLandmarks, { color: '#818cf8', lineWidth: 1, radius: 4 });
 
@@ -161,9 +168,19 @@ export default function AnalyzePage() {
   }, [exercise]);
 
   useEffect(() => {
+    if (!Pose) {
+      console.error('Cannot initialize Pose: MediaPipe Pose not loaded from CDN.');
+      return;
+    }
+    
     poseRef.current = new Pose({
-      locateFile: (file) => `/phystech/mediapipe/${file}`,
+      locateFile: (file) => {
+        // Use stable v0.3 CDN - matches index.html configuration
+        const baseUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.3.1620248257/';
+        return baseUrl + file;
+      }
     });
+    
     poseRef.current.setOptions({
       modelComplexity: 1,
       smoothLandmarks: true,
@@ -171,8 +188,13 @@ export default function AnalyzePage() {
       minDetectionConfidence: 0.5,
       minTrackingConfidence: 0.5,
     });
+    
     poseRef.current.onResults(onResults);
-    return () => { poseRef.current?.close(); };
+    console.log('MediaPipe Pose initialized with CDN (v0.3 stable)');
+    
+    return () => {
+      poseRef.current?.close();
+    };
   }, [onResults]);
 
   const startSession = async () => {
@@ -181,17 +203,49 @@ export default function AnalyzePage() {
     setRepState({ count: 0, lastPhase: 'up' });
     startTimeRef.current = Date.now();
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-    videoRef.current.srcObject = stream;
-
-    cameraRef.current = new Camera(videoRef.current, {
-      onFrame: async () => {
-        await poseRef.current.send({ image: videoRef.current });
-      },
-      width: 640, height: 480,
-    });
-    cameraRef.current.start();
-    setIsRunning(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+      
+      if (!videoRef.current) {
+        console.error('Video element not found');
+        return;
+      }
+      
+      videoRef.current.srcObject = stream;
+      
+      // Wait for video to be ready and playing
+      await new Promise((resolve, reject) => {
+        const video = videoRef.current;
+        video.onloadedmetadata = () => {
+          video.play().then(resolve).catch(reject);
+        };
+        video.onerror = reject;
+      });
+      
+      console.log('Camera stream playing successfully');
+      
+      if (!Camera) {
+        console.error('MediaPipe Camera not loaded from CDN');
+        return;
+      }
+      
+      cameraRef.current = new Camera(videoRef.current, {
+        onFrame: async () => {
+          if (poseRef.current && videoRef.current.readyState >= 2) {
+            await poseRef.current.send({ image: videoRef.current });
+          }
+        },
+        width: 640,
+        height: 480,
+      });
+      
+      cameraRef.current.start();
+      setIsRunning(true);
+      console.log('Session started - analyzing pose...');
+      
+    } catch (err) {
+      console.error('Failed to start session:', err);
+    }
   };
 
   const stopSession = async () => {
