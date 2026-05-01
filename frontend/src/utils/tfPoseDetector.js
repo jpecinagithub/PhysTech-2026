@@ -1,16 +1,13 @@
 import * as poseDetection from '@tensorflow-models/pose-detection';
-import '@tensorflow/tfjs';
 
 let detector = null;
 
 export async function initializePoseDetection() {
   if (detector) return detector;
 
-  const model = poseDetection.SupportedModels.BlazePose;
+  const model = poseDetection.SupportedModels.MoveNet;
   const detectorConfig = {
-    runtime: 'mediapipe',
-    solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/pose',
-    modelType: 'full'
+    modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING
   };
 
   detector = await poseDetection.createDetector(model, detectorConfig);
@@ -34,17 +31,11 @@ export function convertToMediaPipeFormat(poses) {
 
   pose.keypoints.forEach((keypoint) => {
     landmarks[keypoint.index] = {
-      x: keypoint.x / 640, // Normalize to 0-1
+      x: keypoint.x / 640,
       y: keypoint.y / 480,
       visibility: keypoint.score || 1.0
     };
   });
 
-  return {
-    landmarks,
-    worldLandmarks: pose.keypoints3D?.reduce((acc, kp, idx) => {
-      acc[idx] = kp;
-      return acc;
-    }, {}) || null
-  };
+  return { landmarks };
 }
