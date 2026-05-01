@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { analyzeFrame, updateRepCount } from '../utils/poseAnalysis';
-import { initializePoseDetection, detectPose, convertToMediaPipeFormat } from '../utils/tfPoseDetector';
+import { initializePoseDetection, detectPose, convertToMediaPipeFormat } from '../utils/mediaPipePoseDetector';
 import { sessionsApi } from '../services/api';
 
 const EXERCISES = [
@@ -157,7 +157,7 @@ export default function AnalyzePage() {
     setRepState({ count: 0, lastPhase: 'up' });
     startTimeRef.current = Date.now();
 
-    // Initialize TensorFlow.js pose detection
+    // Initialize MediaPipe Vision pose detection
     await initializePoseDetection();
 
     // Start webcam
@@ -172,6 +172,7 @@ export default function AnalyzePage() {
     });
     video.srcObject = stream;
     await video.play();
+    videoRef.current = video;
 
     // Detection loop
     const detect = async () => {
@@ -181,8 +182,8 @@ export default function AnalyzePage() {
         return;
       }
 
-      const poses = await detectPose(video);
-      const results = convertToMediaPipeFormat(poses);
+      const detections = await detectPose(video);
+      const results = convertToMediaPipeFormat(detections);
 
       if (results && results.landmarks) {
         onResults(results);
@@ -193,7 +194,7 @@ export default function AnalyzePage() {
 
     setIsRunning(true);
     requestAnimationFrame(detect);
-    console.log('Session started - analyzing pose with TensorFlow.js...');
+    console.log('Session started - analyzing pose with MediaPipe Vision...');
   };
 
   const stopSession = async () => {
