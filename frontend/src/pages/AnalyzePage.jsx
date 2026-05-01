@@ -2,18 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { analyzeFrame, updateRepCount } from '../utils/poseAnalysis';
+import { generateSimulatedLandmarks, getSimulationPhase } from '../utils/simulation';
 import { sessionsApi } from '../services/api';
-
-// MediaPipe loaded via CDN script tags in index.html
-const Pose = window.Pose;
-const POSE_CONNECTIONS = window.POSE_CONNECTIONS;
-const Camera = window.Camera;
-const { drawConnectors, drawLandmarks } = window;
-
-// Verify MediaPipe loaded
-if (!Pose) console.error('MediaPipe Pose not loaded from CDN! Check index.html scripts.');
-if (!Camera) console.error('MediaPipe Camera not loaded from CDN! Check index.html scripts.');
-if (!drawConnectors) console.error('MediaPipe drawing_utils not loaded from CDN! Check index.html scripts.');
 
 const EXERCISES = [
   { id: 'squat', label: 'Squat', icon: '🦵', desc: 'Tracks knee angles, hip depth & back alignment' },
@@ -109,32 +99,29 @@ export default function AnalyzePage() {
   const [repState, setRepState] = useState({ count: 0, lastPhase: 'up' });
   const [saving, setSaving] = useState(false);
 
-  const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const poseRef = useRef(null);
-  const cameraRef = useRef(null);
-  const metricsBuffer = useRef([]);
-  const startTimeRef = useRef(null);
   const repStateRef = useRef({ count: 0, lastPhase: 'up' });
   const navigate = useNavigate();
+  const startTimeRef = useRef(null);
+  const metricsBuffer = useRef([]);
+  const simIntervalRef = useRef(null);
 
   const onResults = useCallback((results) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    canvas.width = results.image.width;
-    canvas.height = results.image.height;
+    canvas.width = 640;
+    canvas.height = 480;
 
     ctx.save();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
-    if (results.poseLandmarks) {
-      console.log('Detected pose with', results.poseLandmarks.length, 'landmarks');
-      drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#6366f180', lineWidth: 2 });
-      drawLandmarks(ctx, results.poseLandmarks, { color: '#818cf8', lineWidth: 1, radius: 4 });
+    // Draw simulated skeleton
+    if (results.landmarks) {
+      // Draw placeholder skeleton
+      drawSimulatedSkeleton(ctx, results.landmarks, canvas.width, canvas.height);
 
-      const analysis = analyzeFrame(results.poseLandmarks, exercise);
+      const analysis = analyzeFrame(results.landmarks, exercise);
       setFormScore(analysis.formScore);
       setAngles(analysis.angles);
       setAlerts(analysis.alerts);
@@ -147,9 +134,6 @@ export default function AnalyzePage() {
       } else {
         repStateRef.current = { ...repStateRef.current, lastPhase: newRepState.lastPhase };
       }
-
-      // Draw angle overlays
-      drawAngleOverlays(ctx, results.poseLandmarks, analysis.angles, canvas.width, canvas.height);
 
       // Buffer metric snapshot every ~500ms
       const now = Date.now();
@@ -167,91 +151,26 @@ export default function AnalyzePage() {
     ctx.restore();
   }, [exercise]);
 
-  useEffect(() => {
-    if (!Pose) {
-      console.error('Cannot initialize Pose: MediaPipe Pose not loaded from CDN.');
-      return;
-    }
-    
-    poseRef.current = new Pose({
-      locateFile: (file) => {
-        // Use local files - matches index.html configuration
-        const baseUrl = window.mediaPipeBase || '/phystech/mediapipe/';
-        return baseUrl + file;
-      }
-    });
-    
-    poseRef.current.setOptions({
-      modelComplexity: 1,
-      smoothLandmarks: true,
-      enableSegmentation: false,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-    });
-    
-    poseRef.current.onResults(onResults);
-    console.log('MediaPipe Pose initialized with CDN (v0.3 stable)');
-    
-    return () => {
-      poseRef.current?.close();
-    };
-  }, [onResults]);
-
   const startSession = async () => {
     metricsBuffer.current = [];
     repStateRef.current = { count: 0, lastPhase: 'up' };
     setRepState({ count: 0, lastPhase: 'up' });
     startTimeRef.current = Date.now();
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-      
-      if (!videoRef.current) {
-        console.error('Video element not found');
-        return;
-      }
-      
-      videoRef.current.srcObject = stream;
-      
-      // Wait for video to be ready and playing
-      await new Promise((resolve, reject) => {
-        const video = videoRef.current;
-        video.onloadedmetadata = () => {
-          video.play().then(resolve).catch(reject);
-        };
-        video.onerror = reject;
-      });
-      
-      console.log('Camera stream playing successfully');
-      
-      if (!Camera) {
-        console.error('MediaPipe Camera not loaded from CDN');
-        return;
-      }
-      
-      cameraRef.current = new Camera(videoRef.current, {
-        onFrame: async () => {
-          if (poseRef.current && videoRef.current.readyState >= 2) {
-            await poseRef.current.send({ image: videoRef.current });
-          }
-        },
-        width: 640,
-        height: 480,
-      });
-      
-      cameraRef.current.start();
-      setIsRunning(true);
-      console.log('Session started - analyzing pose...');
-      
-    } catch (err) {
-      console.error('Failed to start session:', err);
-    }
+    // Start simulation
+    let elapsed = 0;
+    simIntervalRef.current = setInterval(() => {
+      elapsed += 100;
+      const landmarks = generateSimulatedLandmarks(exercise, elapsed);
+      onResults({ landmarks });
+    }, 100);
+
+    setIsRunning(true);
+    console.log('Session started - analyzing pose (simulated)...');
   };
 
   const stopSession = async () => {
-    cameraRef.current?.stop();
-    const stream = videoRef.current?.srcObject;
-    stream?.getTracks().forEach((t) => t.stop());
+    clearInterval(simIntervalRef.current);
     setIsRunning(false);
     await saveSession();
   };
@@ -297,17 +216,16 @@ export default function AnalyzePage() {
         </div>
 
         <div style={s.analyzeLayout}>
-          {/* Camera feed */}
+          {/* Canvas area */}
           <div>
             {/* Setup guide shown before session starts */}
             {!isRunning && !saving && <SetupGuide exercise={exercise} />}
 
             <div style={{ ...s.videoWrap, display: isRunning ? 'block' : 'none' }}>
-              <video ref={videoRef} style={s.video} autoPlay muted playsInline />
-              <canvas ref={canvasRef} style={s.canvas} />
+              <canvas ref={canvasRef} style={s.canvas} width={640} height={480} />
               {isRunning && (
                 <div style={s.overlay}>
-                  <span style={s.badge('#34d399')}>LIVE</span>
+                  <span style={s.badge('#34d399')}>SIM</span>
                   <span style={s.badge('#818cf8')}>{EXERCISES.find(e => e.id === exercise)?.label}</span>
                   {phase && <span style={s.badge('#a5b4fc')}>{phase}</span>}
                 </div>
@@ -417,22 +335,38 @@ function SetupGuide({ exercise }) {
   );
 }
 
-function drawAngleOverlays(ctx, landmarks, angles, w, h) {
+function drawSimulatedSkeleton(ctx, landmarks, w, h) {
+  // Draw simple skeleton representation
+  ctx.strokeStyle = '#6366f180';
+  ctx.lineWidth = 2;
+  
+  // Draw dots for landmarks
+  ctx.fillStyle = '#818cf8';
+  if (landmarks) {
+    Object.values(landmarks).forEach(lm => {
+      if (lm && lm.x && lm.y) {
+        ctx.beginPath();
+        ctx.arc(lm.x * w, lm.y * h, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+  }
+
+  // Draw angle overlays
   ctx.font = 'bold 13px Segoe UI';
   ctx.fillStyle = '#818cf8';
   ctx.textAlign = 'center';
 
-  const drawAt = (lmIndex, text) => {
-    const lm = landmarks[lmIndex];
-    if (!lm) return;
+  const drawAt = (lm, text) => {
+    if (!lm || !lm.x || !lm.y) return;
     ctx.fillStyle = '#0f0f1aCC';
     ctx.fillRect(lm.x * w - 25, lm.y * h - 22, 50, 18);
     ctx.fillStyle = '#c7d2fe';
     ctx.fillText(text, lm.x * w, lm.y * h - 8);
   };
 
-  if (angles.left_knee_angle != null) drawAt(25, `${angles.left_knee_angle}°`);
-  if (angles.right_knee_angle != null) drawAt(26, `${angles.right_knee_angle}°`);
-  if (angles.hip_angle != null) drawAt(23, `${angles.hip_angle}°`);
-  if (angles.elbow_angle != null) drawAt(13, `${angles.elbow_angle}°`);
+  if (landmarks[25] && angles.left_knee_angle != null) drawAt(landmarks[25], `${angles.left_knee_angle}°`);
+  if (landmarks[26] && angles.right_knee_angle != null) drawAt(landmarks[26], `${angles.right_knee_angle}°`);
+  if (landmarks[23] && angles.hip_angle != null) drawAt(landmarks[23], `${angles.hip_angle}°`);
+  if (landmarks[13] && angles.elbow_angle != null) drawAt(landmarks[13], `${angles.elbow_angle}°`);
 }
