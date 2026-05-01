@@ -16,24 +16,21 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- MediaPipe Pose - Using jsDelivr with proper version -->
+    <!-- MediaPipe Pose - Local files with proper locateFile configuration -->
     <script>
-      window.Module = window.Module || {};
-      window.Module.locateFile = function(file) {
-        const base = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469240/';
-        return base + file;
-      };
-      console.log('MediaPipe Module.locateFile configured for v0.5');
+      // Configure where MediaPipe files are located
+      window.mediaPipeFiles = '/phystech/mediapipe/';
+      console.log('MediaPipe files will be loaded from:', window.mediaPipeFiles);
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675469240/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675469240/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469240/pose.js" crossorigin="anonymous"></script>
+    <script src="/phystech/mediapipe/camera_utils.js"></script>
+    <script src="/phystech/mediapipe/drawing_utils.js"></script>
+    <script src="/phystech/mediapipe/pose.js"></script>
     <script>
       window.addEventListener('load', () => {
         if (window.Pose) {
-          console.log('✅ MediaPipe Pose loaded successfully (v0.5)');
+          console.log('✅ MediaPipe Pose loaded successfully (local)');
         } else {
-          console.error('❌ MediaPipe Pose failed to load! Check CDN.');
+          console.error('❌ MediaPipe Pose failed to load! Check /phystech/mediapipe/');
         }
         if (window.Camera) {
           console.log('✅ MediaPipe Camera loaded successfully');
