@@ -16,11 +16,36 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- MediaPipe Pose - Local files with proper locateFile configuration -->
+    <!-- MediaPipe Pose - Local files configuration -->
     <script>
-      // Configure where MediaPipe files are located
-      window.mediaPipeFiles = '/phystech/mediapipe/';
-      console.log('MediaPipe files will be loaded from:', window.mediaPipeFiles);
+      // Override location pathname BEFORE loading MediaPipe scripts
+      // This ensures MediaPipe loads files from our local directory
+      window.mediaPipeBase = '/phystech/mediapipe/';
+      
+      // Create a fake pathname so MediaPipe thinks files are relative to /phystech/mediapipe/
+      // We do this by overriding the pathname getter temporarily
+      (function() {
+        const originalDescriptor = Object.getOwnPropertyDescriptor(window.location, 'pathname');
+        if (originalDescriptor && originalDescriptor.configurable) {
+          let overridden = false;
+          Object.defineProperty(window.location, 'pathname', {
+            get: function() {
+              if (overridden) {
+                return originalDescriptor.get.call(window.location);
+              }
+              return '/phystech/mediapipe/dummy.html';
+            },
+            configurable: true
+          });
+          
+          // After scripts load, restore original
+          window.addEventListener('load', function() {
+            Object.defineProperty(window.location, 'pathname', originalDescriptor);
+          }, { once: true });
+        }
+      })();
+      
+      console.log('MediaPipe configured to load from:', window.mediaPipeBase);
     </script>
     <script src="/phystech/mediapipe/camera_utils.js"></script>
     <script src="/phystech/mediapipe/drawing_utils.js"></script>
