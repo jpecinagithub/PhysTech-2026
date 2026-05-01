@@ -12,29 +12,15 @@ export default defineConfig(({ mode }) => {
         '/api': 'http://localhost:5000',
       },
     },
-    optimizeDeps: {
-      include: ['recharts'],
-    },
     build: {
+      commonjsOptions: {
+        transformMixedEsModules: true,
+      },
       rollupOptions: {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
               if (id.includes('@mediapipe')) return 'mediapipe';
-              if (
-                id.includes('recharts') ||
-                id.includes('d3-') ||
-                id.includes('d3/') ||
-                id.includes('victory-vendor') ||
-                id.includes('internmap') ||
-                id.includes('robust-predicates') ||
-                id.includes('delaunator')
-              ) return 'recharts';
-              if (
-                id.includes('react-dom') ||
-                id.includes('react-router') ||
-                id.includes('/react/')
-              ) return 'react';
               return 'vendor';
             }
           },
