@@ -105,9 +105,11 @@ export default function AnalyzePage() {
   const startTimeRef = useRef(null);
   const metricsBuffer = useRef([]);
   const isRunningRef = useRef(false);
+  const videoRef = useRef(null);
 
   const onResults = useCallback((results) => {
     const canvas = canvasRef.current;
+    const video = videoRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     canvas.width = 640;
@@ -115,6 +117,15 @@ export default function AnalyzePage() {
 
     ctx.save();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw video frame as background
+    if (video && video.readyState >= 2) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    } else {
+      // Dark background if video not ready
+      ctx.fillStyle = '#0f0f1a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
     // Draw simulated skeleton
     if (results.landmarks) {
@@ -167,6 +178,7 @@ export default function AnalyzePage() {
     video.style.position = 'absolute';
     video.style.top = '-1000px';
     document.body.appendChild(video);
+    videoRef.current = video;
 
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { width: 640, height: 480 }
