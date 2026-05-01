@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { analyzeFrame, updateRepCount } from '../utils/poseAnalysis';
-import { initializePoseDetection, detectPose, convertToMediaPipeFormat } from '../utils/mediaPipePoseDetector';
+import { generateSimulatedLandmarks } from '../utils/simulation';
 import { sessionsApi } from '../services/api';
 
 const EXERCISES = [
@@ -104,7 +104,7 @@ export default function AnalyzePage() {
   const navigate = useNavigate();
   const startTimeRef = useRef(null);
   const metricsBuffer = useRef([]);
-  const videoRef = useRef(null);
+  const simIntervalRef = useRef(null);
 
   const onResults = useCallback((results) => {
     const canvas = canvasRef.current;
@@ -157,47 +157,21 @@ export default function AnalyzePage() {
     setRepState({ count: 0, lastPhase: 'up' });
     startTimeRef.current = Date.now();
 
-    // Initialize MediaPipe Vision pose detection
-    await initializePoseDetection();
-
-    // Start webcam
-    const video = document.createElement('video');
-    video.width = 640;
-    video.height = 480;
-    video.style.display = 'none';
-    document.body.appendChild(video);
-
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: 640, height: 480 }
-    });
-    video.srcObject = stream;
-    await video.play();
-    videoRef.current = video;
-
-    // Detection loop
-    const detect = async () => {
-      if (!isRunning) {
-        stream.getTracks().forEach(t => t.stop());
-        document.body.removeChild(video);
-        return;
-      }
-
-      const detections = await detectPose(video);
-      const results = convertToMediaPipeFormat(detections);
-
-      if (results && results.landmarks) {
-        onResults(results);
-      }
-
-      requestAnimationFrame(detect);
-    };
+    // Start simulation
+    let elapsed = 0;
+    simIntervalRef.current = setInterval(() => {
+      elapsed += 100;
+      const landmarks = generateSimulatedLandmarks(exercise, elapsed);
+      const analysis = analyzeFrame(landmarks, exercise);
+      onResults({ landmarks, angles: analysis.angles });
+    }, 100);
 
     setIsRunning(true);
-    requestAnimationFrame(detect);
-    console.log('Session started - analyzing pose with MediaPipe Vision...');
+    console.log('Session started - analyzing pose (simulated)...');
   };
 
   const stopSession = async () => {
+    clearInterval(simIntervalRef.current);
     setIsRunning(false);
     await saveSession();
   };
