@@ -55,7 +55,7 @@ export async function detectPose(video) {
   return results;
 }
 
-export function convertToMediaPipeFormat(results) {
+export function convertToMediaPipeFormat(results, exercise) {
   if (!results || !results.landmarks || results.landmarks.length === 0) {
     return null;
   }
@@ -71,5 +71,9 @@ export function convertToMediaPipeFormat(results) {
     };
   });
 
-  return { landmarks };
+  // Calculate angles like the simulation does
+  const { analyzeFrame } = require('../utils/poseAnalysis') || {};
+  const angles = analyzeFrame ? analyzeFrame({ landmarks }, exercise).angles : {};
+
+  return { landmarks, angles };
 }
