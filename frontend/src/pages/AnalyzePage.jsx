@@ -119,7 +119,7 @@ export default function AnalyzePage() {
     // Draw simulated skeleton
     if (results.landmarks) {
       // Draw placeholder skeleton
-      drawSimulatedSkeleton(ctx, results.landmarks, canvas.width, canvas.height);
+      drawSimulatedSkeleton(ctx, results.landmarks, results.angles, canvas.width, canvas.height);
 
       const analysis = analyzeFrame(results.landmarks, exercise);
       setFormScore(analysis.formScore);
@@ -335,7 +335,7 @@ function SetupGuide({ exercise }) {
   );
 }
 
-function drawSimulatedSkeleton(ctx, landmarks, w, h) {
+function drawSimulatedSkeleton(ctx, landmarks, angles, w, h) {
   // Draw simple skeleton representation
   ctx.strokeStyle = '#6366f180';
   ctx.lineWidth = 2;
